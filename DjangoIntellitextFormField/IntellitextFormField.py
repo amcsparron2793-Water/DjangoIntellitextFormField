@@ -1,17 +1,21 @@
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Model
 from django.forms import Form, ModelForm, CharField, widgets
 from typing import Dict
 from django.db.models.query import QuerySet
 import logging
 
+mod_dir_command_results = dir()
 logger = logging.getLogger(__name__)
 
 
 class IntellitextBaseForm(Form):
     """For use with non ModelForm form classes and acts as a base class for IntellitextModelForm."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, model_dict: Dict[str, Model],  *args, **kwargs):
+        self.model_dict = model_dict
+
         super().__init__(*args, **kwargs)
         if 'intellitext_fields' in kwargs:
             if isinstance(kwargs['intellitext_fields'], dict) and len(kwargs['intellitext_fields']) > 0:
@@ -22,6 +26,28 @@ class IntellitextBaseForm(Form):
             self.intellitext_fields: dict or None = None
 
         self._CheckSubclass(cls=self)
+
+    @classmethod
+    def model_dict_from_mod_dir(cls, mod_dir, app_name):
+        return cls(get_models(mod_dir, app_name))
+
+    def get_intellitext_choices(self, app_name: str, model_dict: Dict[str, Model] = None) -> Dict[str, QuerySet]:
+        """
+            should be used to return a dictionary of QuerySet's
+            which can then be referenced in other parts of the code
+            (ie views/intellitext html stubs).
+            :return:
+            :rtype:
+        """
+        if model_dict:
+            pass
+        else:
+            model_dict = get_models(self.model_dict, app_name)
+
+        # noinspection PyUnresolvedReferences
+        choices = {(str(x).lower() + '_choices'): y.objects.all() for x, y in model_dict.items()}
+
+        return choices
 
     def _CheckSubclass(self, cls):
         if not issubclass(cls.__class__, (IntellitextBaseForm, IntellitextModelForm)):
@@ -191,12 +217,16 @@ class IntellitextField(CharField):
         return attrs
 
 
-def get_intellitext_choices() -> Dict[str, QuerySet]:
-    """
-    should be used to return a dictionary of QuerySet's
-    which can then be referenced in other parts of the code
-    (ie views/intellitext html stubs).
-    :return:
-    :rtype:
-    """
-    raise NotImplementedError("used here as a stub, needs to be reimplemented to be used")
+def get_models(module_dir_res: Dict[str, Model], app_name: str) -> Dict[str, Model]:
+    from django.apps import apps
+
+    all_current_models = apps.all_models[app_name]
+    new_dict = {}
+
+    for y in module_dir_res:
+        if y.lower() in all_current_models:
+            new_dict.update({all_current_models[y.lower()].__name__: all_current_models[y.lower()]})
+    return new_dict
+
+
+IntellitextBaseForm.model_dict_from_mod_dir(mod_dir_command_results, None)
