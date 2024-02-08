@@ -8,7 +8,48 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class IntellitextBaseForm(Form):
+class IntellitextMetaClass(type):
+    """
+    all of this is based on:
+
+    class MyMeta(type):
+     def __call__(cls, *args, **kwargs):
+            # here is "before __new__ is called"
+            instance = super().__call__(*args, **kwargs)
+            # here is "after __new__ and __init__"
+            if (post:=getattr(cls, "__post_init__", None):
+                   post(*args, **kwargs)
+            return instance
+
+    class MyBase(metaclass=MyMeta):
+         ...
+
+    from https://discuss.python.org/t/add-a-post-method-equivalent-to-the-new-method-but-called-after-init/5449/10
+    """
+    def __call__(cls, *args, **kwargs):
+        instance = super().__call__(*args, **kwargs)
+        if post := getattr(cls, "_post_init", None):
+            post(*args, **kwargs)
+        return instance
+
+
+class TestMe(metaclass=IntellitextMetaClass):
+    def __init__(self):
+        print("this is an initialization")
+
+    # FIXME: is there a way to make this ref to the instance so that self._update_intellitext_attrs() can really be called?
+    @classmethod
+    def _post_init(cls):
+        cls._update_intellitext_attrs()
+
+    @staticmethod
+    def _update_intellitext_attrs():
+        print('this is a fake update')
+
+
+
+
+class IntellitextBaseForm(Form):#, metaclass=IntellitextMetaClass):
     """For use with non ModelForm form classes and acts as a base class for IntellitextModelForm."""
 
     def __init__(self, *args, **kwargs):
