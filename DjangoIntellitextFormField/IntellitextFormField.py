@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class PrePopulatedForm(Form):
+    """A subclass of django.forms.Form which adds a classmethod that allows
+    a Django Form to be created prepopulated with field info."""
     @classmethod
     def PrePopulateForm(cls, function_name: str = None, list_of_results: list = None):
         """
