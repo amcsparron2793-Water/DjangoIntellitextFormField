@@ -1,2 +1,2 @@
 from DjangoIntellitextFormField.IntellitextFormField import (IntellitextBaseForm, IntellitextModelForm,
-                                                             IntellitextField, get_intellitext_choices)
+                                                             IntellitextField, get_intellitext_choices, PrePopulatedForm)
