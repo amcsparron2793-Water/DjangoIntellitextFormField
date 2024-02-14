@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='DjangoIntellitextFormField',
-    version='1.0',
+    version='1.5',
     packages=['DjangoIntellitextFormField'],
     url='https://github.com/amcsparron2793-Water/DjangoIntellitextFormField',
     download_url='https://github.com/amcsparron2793-Water/DjangoIntellitextFormField/archive/refs/tags/1.5.tar.gz',
