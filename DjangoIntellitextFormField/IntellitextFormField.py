@@ -211,9 +211,11 @@ class IntellitextBaseForm(PrePopulatedForm):
 
     def clean(self):
         data = self._intellitext_to_form()
-        # noinspection PyAttributeOutsideInit
-        self.cleaned_data = {**self.cleaned_data, **data}
-
+        # if there is new data from self._intellitext_to_form,
+        # then add it to cleaned data, otherwise don't try to combine the two dicts
+        if data:
+            # noinspection PyAttributeOutsideInit
+            self.cleaned_data = {**self.cleaned_data, **data}
         return self.cleaned_data
 
 
