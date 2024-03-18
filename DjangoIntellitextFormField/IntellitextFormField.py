@@ -234,9 +234,9 @@ class IntellitextModelForm(IntellitextBaseForm, ModelForm):
 
     def clean(self):
         data = self._intellitext_to_form(model_name=self.instance._meta.object_name)
-        # noinspection PyAttributeOutsideInit
-        self.cleaned_data = {**self.cleaned_data, **data}
-
+        if data:
+            # noinspection PyAttributeOutsideInit
+            self.cleaned_data = {**self.cleaned_data, **data}
         return self.cleaned_data
 
     def save(self, commit=True):
