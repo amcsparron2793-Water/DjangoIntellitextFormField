@@ -1,13 +1,13 @@
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError
-from django.forms import Form, ModelForm, CharField, widgets
-from typing import Dict
-from django.db.models.query import QuerySet
 import logging
-
+from typing import Dict
+from abc import abstractmethod
 from inspect import stack as istack
 from collections import ChainMap
 
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.forms import Form, ModelForm, CharField, widgets
+from django.db.models.query import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class PrePopulatedForm(Form):
             try:
                 if function_name != 'AddAccount':
                     new_res.pop('AccountNumber')
-            except KeyError as e:
+            except KeyError:
                 pass
 
         row_id = int(list_of_results[0]['row_id'])
@@ -66,11 +66,11 @@ class PrePopulatedForm(Form):
                 # this is the name of the function that called PrePopulate
                 f_name = istack()[2][3]
                 function_name = f_name
-        except KeyError as e:
+        except KeyError:
             logger.warning("falling back to passed in function name...")
             if not function_name:
                 raise AttributeError("no function_name attribute to fall back on.")
-        except TypeError as e:
+        except TypeError:
             logger.warning("falling back to passed in function name...")
             if not function_name:
                 raise AttributeError("no function_name attribute to fall back on.")
@@ -86,11 +86,12 @@ class PrePopulatedForm(Form):
                     if k == 'id' and int(v) == int(row_id):
                         # print(k, v, row_id)
                         # res.keys() are the model field names.
-                        """ Since the intellitext fields (for the most part) are ModelFieldName + 'Search',
-                        creating a dict with the model field names as keys and the intellitext fields
-                        as values will work to re-map the results for editing.
-                        Anything that isn't an intellitext field OR is already formatted with Search
-                        on the end is appended with a second list comp. """
+
+                        # Since the intellitext fields (for the most part) are ModelFieldName + 'Search',
+                        # creating a dict with the model field names as keys and the intellitext fields
+                        # as values will work to re-map the results for editing.
+                        # Anything that isn't an intellitext field OR is already formatted with Search
+                        # on the end is appended with a second list comp.
                         SearchKeys = ([{x: str(x + 'Search')} for x in res.keys()
                                        if x != 'id' and not x.endswith('Search') and x not in cls().fields]
                                       + [{x: x} for x in res.keys() if
@@ -113,8 +114,8 @@ class PrePopulatedForm(Form):
                         return cls(initial=new_res)
             raise ValidationError("no row match found, could not pre-populate")
 
-        else:
-            raise AttributeError("initial_values and row_id must be provided in order to pre-populate the form")
+        # else is implied here
+        raise AttributeError("initial_values and row_id must be provided in order to pre-populate the form")
 
 
 class IntellitextBaseForm(PrePopulatedForm):
@@ -136,8 +137,9 @@ class IntellitextBaseForm(PrePopulatedForm):
         if not issubclass(cls.__class__, (IntellitextBaseForm, IntellitextModelForm)):
             if self.intellitext_fields:
                 return self.intellitext_fields
-            else:
-                raise AttributeError("intellitext_fields attribute cannot be None or empty, and must be a dictionary.")
+            # else is implied
+            raise AttributeError("intellitext_fields attribute cannot be None or empty, and must be a dictionary.")
+        return None
 
     @staticmethod
     def _validate_intellitext_dict(candidates: dict):
@@ -210,6 +212,11 @@ class IntellitextBaseForm(PrePopulatedForm):
             return data
 
     def clean(self):
+        """
+        :return: The cleaned data after combining the existing cleaned data
+        with any new data obtained from self._intellitext_to_form.
+        :rtype: dict
+        """
         data = self._intellitext_to_form()
         # if there is new data from self._intellitext_to_form,
         # then add it to cleaned data, otherwise don't try to combine the two dicts
@@ -233,6 +240,10 @@ class IntellitextModelForm(IntellitextBaseForm, ModelForm):
             self.add_error(None, e)
 
     def clean(self):
+        """
+        :return: Dictionary containing cleaned data after processing intellitext to form
+        :rtype: dict
+        """
         data = self._intellitext_to_form(model_name=self.instance._meta.object_name)
         if data:
             # noinspection PyAttributeOutsideInit
@@ -268,7 +279,7 @@ class IntellitextModelForm(IntellitextBaseForm, ModelForm):
                     # create a new instance with the cleaned data
                     self.instance = self.instance._meta.model(**self.cleaned_data)
                     self.instance.pk = pk_to_use
-                    logger.info(f"updated successfully.")
+                    logger.info("updated successfully.")
             if commit:
                 self.instance.save()
                 self._save_m2m()
