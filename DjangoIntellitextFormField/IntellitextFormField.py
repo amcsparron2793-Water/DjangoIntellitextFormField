@@ -159,6 +159,7 @@ class IntellitextBaseForm(PrePopulatedForm):
             if f in self.intellitext_fields.keys():
                 self.fields[f].widget.attrs.update(self.intellitext_fields[f].items())
 
+    @abstractmethod
     def _process_raw(self, intf: str, model_name: str, data: dict, raw) -> Dict[str, int]:
         """
         Responsible for re-keying data and translating FKs where appropriate.
@@ -190,7 +191,6 @@ class IntellitextBaseForm(PrePopulatedForm):
                                                                       AccountNumber=acc_num).pk})
             return data
         """
-        raise NotImplementedError("_process_raw must be overwritten in a subclass first.")
 
     def _intellitext_to_form(self, model_name=None):
         """Updates the form with the appropriate form values based on the intellitext info given.
@@ -229,6 +229,39 @@ class IntellitextBaseForm(PrePopulatedForm):
 class IntellitextModelForm(IntellitextBaseForm, ModelForm):
     """ subclasses IntellitextBaseForm to get all the Intellitext stuff,
     but also subclasses ModelForm so that its Meta etc. is present."""
+
+    @abstractmethod
+    def _process_raw(self, intf: str, model_name: str, data: dict, raw) -> Dict[str, int]:
+        """
+        Responsible for re-keying data and translating FKs where appropriate.
+        Can and should be overridden in any new subclasses.
+
+        Parameters:
+        - intf (str): IntellitextField (name).
+        - model_name (str): Name of the model being processed.
+        - data (dict): Dictionary containing data to be processed.
+        - raw: Raw data value to be processed.
+
+        Returns:
+        Dict[str, int]: Processed data dictionary with keys and corresponding primary key integers.
+
+        Raises:
+        Exception: Any unexpected error encountered during processing.
+
+        Note:
+        - This method is responsible for re-keying data and translating foreign keys (FKs) where applicable.
+        - It can be overridden in new subclasses to customize processing behavior.
+
+
+        Example:
+            elif 'AccountSearch' == intf and model_name != 'Accounts':
+                name = raw.split('-')[0].strip()
+                # THE SPACES ARE IMPORTANT SO THAT -000 isn't seen as the last - in the string
+                acc_num = raw.split(' - ')[-1].strip()
+                data.update({'Account_id': Accounts.objects.all().get(NameOnAccount=name,
+                                                                      AccountNumber=acc_num).pk})
+            return data
+        """
 
     def _check_for_model_uniqueness(self):
         try:
